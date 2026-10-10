@@ -3,7 +3,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { config } from './config.js';
 import { createGitHub } from './github.js';
 import { complete } from './llm.js';
-import { buildMessages, cleanAnswer, renderExplainer } from './prompt.js';
+import { buildMessages, cleanAnswer, PROMPT_VERSION, renderExplainer } from './prompt.js';
 import { loadIndex, pickQueue, saveIndex, toEntry } from './store.js';
 import { syncPrs } from './sync.js';
 
@@ -21,7 +21,7 @@ index.prs = prs;
 console.log(`${found} PRs by @${author} in ${repo}, ${pulls.size} new or updated.`);
 
 // 2. Write explainers for PRs that have none, or whose branch moved since.
-const queue = config.ready ? pickQueue(index.prs, { only: config.onlyPrs, max: config.maxPerRun }) : [];
+const queue = config.ready ? pickQueue(index.prs, { only: config.onlyPrs, max: config.maxPerRun, prompt: PROMPT_VERSION }) : [];
 if (!config.ready) console.log('No model credentials are set, so no explainers are written. The PR list is still updated.');
 else console.log(queue.length ? `Explaining ${queue.map((p) => `#${p.number}`).join(', ')}` : 'All explainers are up to date.');
 
@@ -49,7 +49,7 @@ for (const [i, entry] of queue.entries()) {
     const markdown = renderExplainer({ repo, pr, body: cleanAnswer(answer), model });
     await writeFile(new URL(`${n}.md`, outDir), markdown);
     Object.assign(entry, toEntry(pr, entry), {
-      explained: { sha: pr.head.sha, at: new Date().toISOString(), model },
+      explained: { sha: pr.head.sha, prompt: PROMPT_VERSION, at: new Date().toISOString(), model },
       failures: 0,
     });
     done.push(n);

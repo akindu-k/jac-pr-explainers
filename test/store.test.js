@@ -48,3 +48,11 @@ test('a refresh updates PR details but keeps saved explainer state', () => {
     [[3, 'new', null], [2, 'b', null], [1, 'a2', { sha: 'x' }]],
   );
 });
+
+test('explainers from an older prompt are written again', () => {
+  const prs = [
+    { number: 1, headSha: 'a', explained: { sha: 'a', prompt: 2 } },
+    { number: 2, headSha: 'b', explained: { sha: 'b', prompt: 1 } },
+  ];
+  assert.deepEqual(pickQueue(prs, { max: 10, prompt: 2 }).map((p) => p.number), [2]);
+});

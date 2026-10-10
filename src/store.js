@@ -43,11 +43,13 @@ export function toEntry(pr, previous) {
   };
 }
 
-// PRs with no explainer, or whose branch moved since it was written; newest first.
-export function pickQueue(prs, { only = [], max }) {
+// PRs with no explainer, or whose explainer was written for an older commit or
+// an older prompt; newest first.
+export function pickQueue(prs, { only = [], max, prompt }) {
   if (only.length) return prs.filter((pr) => only.includes(pr.number));
+  const stale = (pr) => pr.explained?.sha !== pr.headSha || pr.explained?.prompt !== prompt;
   return prs
-    .filter((pr) => pr.explained?.sha !== pr.headSha && (pr.failures ?? 0) < MAX_FAILURES)
+    .filter((pr) => stale(pr) && (pr.failures ?? 0) < MAX_FAILURES)
     .sort((a, b) => b.number - a.number)
     .slice(0, max);
 }
