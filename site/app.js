@@ -4,7 +4,8 @@ const app = document.getElementById('app');
 const foot = document.getElementById('foot');
 
 let index = null;
-const view = { query: '', state: 'all', shown: PAGE };
+// Open PRs first: they're the ones still being reviewed.
+const view = { query: '', state: 'open', shown: PAGE };
 
 const date = (iso) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -26,10 +27,19 @@ function stateLabel(pr) {
   return { open: 'Open', merged: 'Merged', closed: 'Closed' }[pr.state];
 }
 
-function explainerTag(pr) {
-  if (!pr.explained) return el('span', { class: 'tag' }, 'Pending');
-  if (pr.explained.sha !== pr.headSha) return el('span', { class: 'tag outdated' }, 'Outdated');
-  return null;
+const STATES = [['open', 'Open'], ['merged', 'Merged'], ['closed', 'Closed'], ['all', 'All']];
+
+// Plain text with `code` spans, as the explainer summaries use.
+function inline(text) {
+  return text
+    .replace(/\*\*/g, '')
+    .split(/(`[^`]+`)/)
+    .map((part) => (/^`[^`]+`$/.test(part) ? el('code', {}, part.slice(1, -1)) : part));
+}
+
+function statePill(pr) {
+  const draft = pr.state === 'open' && pr.draft;
+  return el('span', { class: `state ${draft ? 'draft' : pr.state}` }, stateLabel(pr));
 }
 
 // List view
@@ -41,10 +51,31 @@ function matches(pr) {
   return pr.title.toLowerCase().includes(q) || String(pr.number).includes(q.replace('#', ''));
 }
 
+function row(pr) {
+  const outdated = pr.explained && pr.explained.sha !== pr.headSha;
+  return el('li', {},
+    el('a', { class: `row ${pr.state}`, href: `#/${pr.number}` },
+      el('span', { class: 'line' },
+        statePill(pr),
+        el('span', { class: 'title' }, pr.title),
+      ),
+      pr.summary
+        ? el('span', { class: 'summary' }, ...inline(pr.summary))
+        : el('span', { class: 'summary pending' }, pr.explained ? 'Open to read the explainer.' : 'Explainer not written yet.'),
+      el('span', { class: 'meta' },
+        `#${pr.number} · opened ${date(pr.createdAt)}`,
+        pr.mergedAt ? ` · merged ${date(pr.mergedAt)}` : '',
+        ` · +${pr.additions} −${pr.deletions}`,
+        outdated ? el('span', { class: 'flag' }, 'New commits since the explainer') : null,
+      ),
+    ),
+  );
+}
+
 function renderList() {
   document.title = 'Jac PRs Explained';
   const prs = index.prs;
-  const count = (state) => prs.filter((p) => p.state === state).length;
+  const count = (state) => (state === 'all' ? prs.length : prs.filter((p) => p.state === state).length);
   const explained = prs.filter((p) => p.explained).length;
 
   const list = el('ul', { class: 'list' });
@@ -52,38 +83,25 @@ function renderList() {
 
   function fill() {
     const rows = prs.filter(matches);
-    list.replaceChildren(
-      ...rows.slice(0, view.shown).map((pr) =>
-        el('li', {},
-          el('a', { class: 'row', href: `#/${pr.number}` },
-            el('span', { class: `dot ${pr.state}`, title: stateLabel(pr) }),
-            el('span', { class: 'body' },
-              el('span', { class: 'title' }, pr.title),
-              el('span', { class: 'meta' },
-                `#${pr.number} · ${stateLabel(pr)} · opened ${date(pr.createdAt)} · +${pr.additions} −${pr.deletions}`),
-            ),
-            explainerTag(pr),
-          ),
-        ),
-      ),
-    );
+    list.replaceChildren(...rows.slice(0, view.shown).map(row));
     if (!rows.length) list.append(el('li', { class: 'empty' }, 'No PRs match.'));
     more.hidden = rows.length <= view.shown;
   }
 
-  const chip = (value, label) =>
+  const chip = ([value, label]) =>
     el('button', {
       type: 'button',
+      'data-state': value,
       'aria-pressed': String(view.state === value),
       onclick: (e) => {
         view.state = value;
         view.shown = PAGE;
-        for (const b of e.target.parentNode.children) b.setAttribute('aria-pressed', String(b === e.target));
+        for (const b of e.currentTarget.parentNode.children) b.setAttribute('aria-pressed', String(b === e.currentTarget));
         fill();
       },
-    }, label);
+    }, label, el('span', { class: 'count' }, String(count(value))));
 
-  const stat = (value, label) => el('div', { class: 'stat' }, el('b', {}, String(value)), el('span', {}, label));
+  const stat = (value, label, tone) => el('div', { class: `stat ${tone}` }, el('b', {}, String(value)), el('span', {}, label));
 
   app.replaceChildren(
     el('section', { class: 'intro' },
@@ -93,10 +111,10 @@ function renderList() {
         ': what was wrong, what changed and how the fix works.'),
     ),
     el('div', { class: 'stats' },
-      stat(prs.length, 'pull requests'),
-      stat(count('merged'), 'merged'),
-      stat(count('open'), 'open'),
-      stat(explained, 'explained'),
+      stat(count('open'), 'open', 'open'),
+      stat(count('merged'), 'merged', 'merged'),
+      stat(count('closed'), 'closed', 'closed'),
+      stat(`${explained} / ${prs.length}`, 'explained', 'explained'),
     ),
     el('div', { class: 'controls' },
       el('input', {
@@ -107,9 +125,7 @@ function renderList() {
         value: view.query,
         oninput: (e) => { view.query = e.target.value.trim(); view.shown = PAGE; fill(); },
       }),
-      el('div', { class: 'chips', role: 'group', 'aria-label': 'Filter by state' },
-        chip('all', 'All'), chip('open', 'Open'), chip('merged', 'Merged'), chip('closed', 'Closed'),
-      ),
+      el('div', { class: 'chips', role: 'group', 'aria-label': 'Filter by state' }, STATES.map(chip)),
     ),
     list,
     more,
@@ -133,7 +149,7 @@ async function renderDetail(number) {
   app.replaceChildren(
     back,
     el('section', { class: 'detail' },
-      el('span', { class: `pill ${pr.state}` }, stateLabel(pr)),
+      statePill(pr),
       el('h1', {}, pr.title),
       el('div', { class: 'meta' },
         `#${pr.number} · opened ${date(pr.createdAt)}`,

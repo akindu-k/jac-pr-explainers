@@ -6,33 +6,134 @@
 
 <p align="center">
   A plain-language explainer for every pull request I open in <a href="https://github.com/jaseci-labs/jac">jaseci-labs/jac</a>,<br>
-  written automatically and shown on a small private website.
+  written to help me explain each change to a senior engineer. It's written automatically every hour and shown on a private website.
 </p>
 
-## What it does
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#setup">Setup</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="#run-locally">Run locally</a>
+</p>
 
-**Every hour**, a GitHub Actions job:
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-24-5FA04E?logo=nodedotjs&logoColor=white" alt="Node.js 24">
+  <img src="https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white" alt="Express 5">
+  <img src="https://img.shields.io/badge/GitHub_Actions-hourly-2088FF?logo=githubactions&logoColor=white" alt="GitHub Actions, hourly">
+  <img src="https://img.shields.io/badge/Render-free_tier-46E3B7?logo=render&logoColor=white" alt="Render free tier">
+  <img src="https://img.shields.io/badge/dependencies-1-brightgreen" alt="One runtime dependency">
+</p>
 
-1. Finds every PR by [@akindu-k](https://github.com/akindu-k) in `jaseci-labs/jac`.
-2. Writes an explainer for any PR that doesn't have one yet, or that has new commits since its explainer was written. It sends the PR's description, commits and diff to the model and asks for these sections: *In short*, *Why it was needed*, *What changed*, *How it works*, *Tests* and *Worth knowing*.
-3. Commits the result to [`site/explainers/`](site/explainers): one `<number>.md` per PR, plus `index.json` listing every PR.
+![The PR list on its default Open view: each open PR has a green edge and label, its title and the explainer's short summary](docs/screenshots/list-dark.webp)
 
-**The website** (an Express server on Render) needs a username and password. It lists the PRs, with search and open/merged/closed filters, and renders each explainer. It reads the explainers from this repo when a page is requested, so new explainers appear without a redeploy.
+## Why
 
-**Refresh** fetches your current PRs from GitHub straight away, so new PRs show up at once. It then starts the job, and the page follows the job and reloads when the new explainers are written.
+A PR's diff shows *what* changed, but not the background you need to talk about it: what each term means, why the old behaviour was wrong, and how the code runs after the fix. This project writes that background for every PR, in simple English, so I can explain any of my changes clearly to a senior engineer, even in a part of the codebase I'm new to.
+
+## Features
+
+### Explainers
+
+Each explainer is written to the PR's author, as someone new to the codebase, and has the same sections:
+
+| Section | What it covers |
+| --- | --- |
+| **In short** | The problem and the fix in two or three sentences. |
+| **Words to know** | A simple explanation of every term the PR needs: project parts, tools and programming ideas. |
+| **The problem** | What happened before the PR, step by step, and why it was wrong. |
+| **The changes, one by one** | Each file or group of files: what the code does now, why it changed, and diff excerpts explained line by line. |
+| **How it runs now** | A numbered walk-through of the execution flow after the PR, with changed and new steps marked. |
+| **Tests** | What each added or changed test sets up, checks and proves. |
+| **Explaining it in one minute** | A short paragraph to say out loud to a senior. |
+
+Explainers only state what the PR's description, commits and diff support. When the model is unsure, or part of the diff had to be left out, the explainer says so instead of guessing.
+
+### Automation
+
+| Feature | What it does |
+| --- | --- |
+| **Hourly job** | A GitHub Actions workflow finds every PR by the author in the source repo and writes the missing explainers. |
+| **Kept up to date** | A PR that gets new commits is explained again for its latest commit. Merged and closed PRs keep their explainers. |
+| **Prompt versioning** | Each explainer records the prompt version it was written with. When the prompt changes, older explainers are rewritten. |
+| **Newest first** | New PRs are explained before older ones, so a backfill never delays a PR you just opened. |
+| **Fits the diff to the model** | Lockfiles and generated files are left out, source files come before tests, and long diffs are trimmed to a size budget. A request that is still too long is retried with half the diff. |
+| **Polite to usage limits** | At most 3 explainers per run (configurable), with a pause between requests. On a usage limit the run stops and the next one carries on. A PR that fails 3 times is skipped until it changes. |
+| **Re-explain on demand** | Run the workflow manually with PR numbers to write their explainers again. |
+| **Quiet history** | Runs that change nothing don't commit. Commits name the PRs they explain, e.g. `Explain #9911, #9836, #9740`. |
+| **Readable on GitHub** | Explainers are plain Markdown files in [`site/explainers/`](site/explainers), one per PR. |
+
+### Models
+
+| Option | How |
+| --- | --- |
+| **Claude subscription** (default) | Uses the Claude Code CLI with a token from `claude setup-token`. It runs on your Pro or Max plan's usage, with no API billing. |
+| **Any OpenAI-compatible API** | Gemini (free tier), Groq, OpenRouter, OpenAI or a local Ollama, set with `LLM_PROVIDER=openai`. |
+
+### Website
+
+| Feature | What it does |
+| --- | --- |
+| **Private** | Every page and file needs a sign-in with username and password. The server won't start without a password, so it can't go public by accident. |
+| **Secure sessions** | Signed, HttpOnly, SameSite cookies that last 30 days. Failed sign-ins are slowed down. Changing the password signs every session out. |
+| **Open PRs first** | The list opens on your open PRs, the ones still in review. Open / Merged / Closed / All filters show how many PRs each holds. Search works by title or number. |
+| **Colour-coded states** | Green for open, purple for merged, grey for closed, with a coloured edge and label on every row. Drafts get an outlined *Draft* label. The counts at the top use the same colours. |
+| **Summaries in the list** | Each row shows the explainer's *In short* text under the title, so you can tell what a PR does without opening it. |
+| **Status notes** | *Explainer not written yet* for PRs still waiting. *New commits since the explainer* when the PR changed after its explainer was written. |
+| **Explainer page** | Shows the PR's state, dates, size and GitHub link above the rendered explainer. The Markdown is sanitized before display. |
+| **Refresh button** | Fetches your current PRs from GitHub straight away, so new ones appear at once. It then starts the job and shows its progress, and reloads when the new explainers are in. |
+| **Always current** | The site reads explainers from this repo on request, cached briefly and revalidated with ETags. New explainers appear without a redeploy. |
+| **Light and dark** | Follows the system theme, with a toggle that's remembered. |
+| **Phone friendly** | The layout works down to small phone screens. |
+
+## Screenshots
+
+| Sign-in | Light theme |
+| --- | --- |
+| ![The sign-in page with username and password fields](docs/screenshots/login.webp) | ![The PR list in the light theme](docs/screenshots/list-light.webp) |
+
+| An explainer | On a phone |
+| --- | --- |
+| ![The explainer for #9740, opening with In short and Words to know](docs/screenshots/explainer-dark.webp) | <img src="docs/screenshots/mobile.webp" width="300" alt="The open PR list on a phone"> |
+
+## How it works
+
+```
+                 every hour, or the Refresh button
+                               │
+                               ▼
+┌──────────────────── GitHub Actions: Explain PRs ────────────────────┐
+│ 1. Find the author's PRs in jaseci-labs/jac                         │
+│ 2. Pick PRs with no explainer, new commits, or an older prompt      │
+│ 3. For each: description + commits + diff ──► model ──► <number>.md │
+│ 4. Commit site/explainers/ (the .md files and index.json)           │
+└─────────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+                   this repo, site/explainers/
+                               │  read on request
+                               ▼
+┌──────────────── Website on Render (sign-in required) ───────────────┐
+│ PR list · search and filters · explainer pages · Refresh            │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+When you press **Refresh**, the server does two things:
+
+1. It fetches your PRs from GitHub itself and lays the result over the saved list, so new and updated PRs show at once.
+2. It starts the workflow. The page checks the run every 5 seconds and reloads the explainers when it finishes.
 
 ## Setup
 
 ### 1. Let the job use your Claude subscription
 
-Explainers are written by Claude through the Claude Code CLI, signed in with your Pro or Max plan rather than a paid API key. Usage counts toward your plan's limits. By default the job writes at most 3 explainers an hour, which leaves room for your own use while it works through older PRs.
-
 ```sh
-claude setup-token        # sign in in the browser; prints a token valid for one year
+claude setup-token        # approve in the browser; prints a token valid for one year
 gh secret set CLAUDE_CODE_OAUTH_TOKEN -R akindu-k/jac-pr-explainers   # paste it
 ```
 
-Until the secret is set, the job only updates the PR list, and every PR shows as *Pending*.
+The token uses the same plan as your own Claude use and isn't billed separately. It counts toward your usage limits.
 
 ### 2. Make a token for the website
 
@@ -41,7 +142,7 @@ Create a [fine-grained personal access token](https://github.com/settings/person
 - **Repository access:** only `akindu-k/jac-pr-explainers`
 - **Permissions:** Contents *Read-only*, Actions *Read and write*
 
-The site uses it to read explainers and to start the job from the Refresh button.
+The site uses it to read the explainers and to start the job from the Refresh button.
 
 ### 3. Deploy the website on Render
 
@@ -49,28 +150,37 @@ The site uses it to read explainers and to start the job from the Refresh button
 
 | Variable | Value |
 | --- | --- |
-| `AUTH_PASSWORD` | the password you'll sign in with (the username is `akindu-k`) |
+| `AUTH_PASSWORD` | the password you'll sign in with; the username is `akindu-k` |
 | `GITHUB_TOKEN` | the token from step 2 |
 
-The server refuses to start without a password, so the site is never public by accident. Sessions last 30 days.
+The Blueprint ignores commits that only touch `site/explainers/`, so the job's commits don't trigger redeploys. Like any free Render service, the site sleeps when idle. The first visit after a while takes about a minute.
 
 ## Configuration
 
-**Job** (repository variables and secrets):
+### Job (repository secrets and variables)
 
 | Name | Default | |
 | --- | --- | --- |
 | `CLAUDE_CODE_OAUTH_TOKEN` (secret) | | From `claude setup-token` |
-| `LLM_MODEL` | `sonnet` | Any model name Claude Code accepts, for example `opus` or `haiku` |
-| `MAX_PER_RUN` | `3` | Most explainers per hourly run |
-| `MAX_INPUT_CHARS` | `120000` | How much PR text to send; long diffs are trimmed, source files before tests |
-| `SOURCE_REPO`, `PR_AUTHOR` | `jaseci-labs/jac`, `akindu-k` | Whose PRs, and where |
+| `LLM_MODEL` | `sonnet` | Any model Claude Code accepts, e.g. `opus` or `haiku` |
+| `MAX_PER_RUN` | `3` | Most explainers per run |
+| `MAX_INPUT_CHARS` | `120000` | How much PR text to send per request |
+| `SOURCE_REPO` | `jaseci-labs/jac` | Where to look for PRs |
+| `PR_AUTHOR` | `akindu-k` | Whose PRs to explain |
+| `LLM_PROVIDER` | `claude-code` | `openai` for an OpenAI-compatible API |
+| `LLM_BASE_URL`, `LLM_API_KEY` (secret) | | For `openai`, e.g. `https://generativelanguage.googleapis.com/v1beta/openai` with `LLM_MODEL=gemini-3.8-flash` |
 
-If you hit the plan's usage limit, the job stops and the rest wait for the next run. To explain specific PRs again, run **Explain PRs** from the Actions tab and enter their numbers in *prs*.
+To explain specific PRs again, open **Actions → Explain PRs → Run workflow**. Enter the numbers in *prs* (e.g. `9923, 9911`), and optionally a larger *max*.
 
-The job can also use any OpenAI-compatible API instead. Set `LLM_PROVIDER=openai` with `LLM_BASE_URL`, `LLM_MODEL` and an `LLM_API_KEY` secret. For example, Gemini's free tier uses `https://generativelanguage.googleapis.com/v1beta/openai` with `gemini-3.8-flash`.
+### Website (environment variables)
 
-**Website** (environment variables): `AUTH_USERNAME` (default `akindu-k`), `AUTH_PASSWORD`, `GITHUB_TOKEN`, and `CONTENT_REPO`, the repo to read explainers from. When `CONTENT_REPO` is unset, the site reads the local `site/explainers/`.
+| Name | Default | |
+| --- | --- | --- |
+| `AUTH_USERNAME` | `akindu-k` | The one account that can sign in |
+| `AUTH_PASSWORD` | | Required |
+| `GITHUB_TOKEN` | | Reads explainers and starts the job. Without it, Refresh only updates the PR list. |
+| `CONTENT_REPO` | | The repo to read explainers from. Unset: the local `site/explainers/` |
+| `CONTENT_BRANCH` | `main` | |
 
 ## Run locally
 
@@ -84,14 +194,19 @@ npm start                                       # http://localhost:3000
 npm test
 ```
 
+`ONLY_PRS=9923 npm run explain` writes one PR's explainer again.
+
 ## Layout
 
 ```
-src/run.js        the job: sync PRs, pick what needs explaining, write the files
-src/sync.js       bring the PR list up to date with GitHub
-src/llm.js        Claude Code CLI, or any OpenAI-compatible API
-src/prompt.js     the prompt (fitted to a size budget) and the .md format
-src/store.js      index.json, the queue, and merging a refresh into it
-server/           the website: sign-in, explainers from the repo, refresh
-site/             the pages the server serves
+src/run.js          the job: sync PRs, pick what needs explaining, write the files
+src/sync.js         bring the PR list up to date with GitHub
+src/prompt.js       the prompt, fitting the diff to a budget, and the .md format
+src/llm.js          Claude Code CLI, or any OpenAI-compatible API
+src/store.js        index.json, the queue, and merging a refresh into it
+src/github.js       GitHub REST calls
+server/             the website: sign-in, explainers from the repo, refresh
+site/               the pages the server serves
+site/explainers/    one <number>.md per PR, and index.json
+test/               unit and server tests (node --test)
 ```

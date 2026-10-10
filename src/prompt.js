@@ -140,3 +140,11 @@ export function renderExplainer({ repo, pr, body, model, now = new Date() }) {
   ];
   return lines.join('\n');
 }
+
+// The "In short" paragraph, shown under the PR's title in the list.
+export function summaryOf(markdown) {
+  const match = markdown.match(/(?:^|\n)## In short\s*\n+([\s\S]*?)(?=\n## |\n---|$)/);
+  if (!match) return null;
+  const text = match[1].replace(/\s+/g, ' ').trim();
+  return text.length > 400 ? `${text.slice(0, 397).replace(/\s+\S*$/, '')}…` : text;
+}

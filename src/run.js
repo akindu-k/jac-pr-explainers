@@ -1,9 +1,9 @@
-import { appendFile, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { config } from './config.js';
 import { createGitHub } from './github.js';
 import { complete } from './llm.js';
-import { buildMessages, cleanAnswer, PROMPT_VERSION, renderExplainer } from './prompt.js';
+import { buildMessages, cleanAnswer, PROMPT_VERSION, renderExplainer, summaryOf } from './prompt.js';
 import { loadIndex, pickQueue, saveIndex, toEntry } from './store.js';
 import { syncPrs } from './sync.js';
 
@@ -18,6 +18,12 @@ index.repo = repo;
 index.author = author;
 index.syncedAt = new Date().toISOString();
 index.prs = prs;
+// Explainers written before summaries were stored.
+for (const entry of index.prs) {
+  if (!entry.explained || entry.summary) continue;
+  const markdown = await readFile(new URL(`${entry.number}.md`, outDir), 'utf8').catch(() => '');
+  entry.summary = summaryOf(markdown);
+}
 console.log(`${found} PRs by @${author} in ${repo}, ${pulls.size} new or updated.`);
 
 // 2. Write explainers for PRs that have none, or whose branch moved since.
@@ -46,10 +52,12 @@ for (const [i, entry] of queue.entries()) {
       }
     }
 
-    const markdown = renderExplainer({ repo, pr, body: cleanAnswer(answer), model });
+    const body = cleanAnswer(answer);
+    const markdown = renderExplainer({ repo, pr, body, model });
     await writeFile(new URL(`${n}.md`, outDir), markdown);
     Object.assign(entry, toEntry(pr, entry), {
       explained: { sha: pr.head.sha, prompt: PROMPT_VERSION, at: new Date().toISOString(), model },
+      summary: summaryOf(body),
       failures: 0,
     });
     done.push(n);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildMessages, cleanAnswer, orderFiles, renderExplainer, MARKER } from '../src/prompt.js';
+import { buildMessages, cleanAnswer, orderFiles, renderExplainer, summaryOf, MARKER } from '../src/prompt.js';
 
 const pr = {
   number: 42,
@@ -48,4 +48,11 @@ test('the explainer links the PR and the commit it describes', () => {
   assert.ok(md.includes(MARKER));
   assert.match(md, /pull\/42\/commits\/abcdef1234567890/);
   assert.match(md, /on 10 Oct 2026/);
+});
+
+test('summaryOf takes the In short paragraph', () => {
+  const md = '# T\n\n<!-- explainer -->\n\n## In short\n\nIt was\nbroken. Now `x` works.\n\n## Words to know\n- a';
+  assert.equal(summaryOf(md), 'It was broken. Now `x` works.');
+  assert.equal(summaryOf('no sections'), null);
+  assert.ok(summaryOf(`## In short\n${'word '.repeat(200)}`).length <= 400);
 });

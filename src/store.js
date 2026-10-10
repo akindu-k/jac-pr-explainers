@@ -39,6 +39,7 @@ export function toEntry(pr, previous) {
     deletions: pr.deletions,
     changedFiles: pr.changed_files,
     explained: previous?.explained ?? null,
+    summary: previous?.summary ?? null,
     failures: previous?.headSha === pr.head.sha ? (previous?.failures ?? 0) : 0,
   };
 }
@@ -62,7 +63,12 @@ export function mergeLive(saved, live) {
   for (const pr of live) {
     const current = byNumber.get(pr.number);
     if (current && current.updatedAt >= pr.updatedAt) continue;
-    byNumber.set(pr.number, { ...pr, explained: current?.explained ?? null, failures: current?.failures ?? 0 });
+    byNumber.set(pr.number, {
+      ...pr,
+      explained: current?.explained ?? null,
+      summary: current?.summary ?? null,
+      failures: current?.failures ?? 0,
+    });
   }
   return [...byNumber.values()].sort((a, b) => b.number - a.number);
 }
