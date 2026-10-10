@@ -5,7 +5,7 @@ on:
     - cron: '17 * * * *'
   push:
     branches: [main]
-    paths-ignore: ['README.md']
+    paths: ['src/**', '.github/workflows/explain.yml']
   workflow_dispatch:
     inputs:
       prs:
@@ -19,17 +19,23 @@ concurrency:
   group: explain
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   explain:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
+      - run: npm ci
       - run: npm test
+      - name: Install Claude Code
+        if: vars.LLM_PROVIDER == '' || vars.LLM_PROVIDER == 'claude-code'
+        run: npm install -g @anthropic-ai/claude-code
       - name: Write explainers
         id: run
         run: node src/run.js
@@ -37,9 +43,11 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           SOURCE_REPO: ${{ vars.SOURCE_REPO }}
           PR_AUTHOR: ${{ vars.PR_AUTHOR }}
-          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           MAX_PER_RUN: ${{ inputs.max || vars.MAX_PER_RUN }}
           MAX_INPUT_CHARS: ${{ vars.MAX_INPUT_CHARS }}
           ONLY_PRS: ${{ inputs.prs }}
@@ -54,24 +62,3 @@ jobs:
           git commit -m "${explained:+Explain $explained}${explained:-Update the PR list}"
           git pull --rebase
           git push
-
-  deploy:
-    needs: explain
-    if: always()
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-      - id: deploy
-        uses: actions/deploy-pages@v4

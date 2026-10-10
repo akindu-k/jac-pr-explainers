@@ -1,9 +1,9 @@
 {
   "repo": "jaseci-labs/jac",
   "author": "akindu-k",
-  "syncedAt": "2026-10-10T09:50:44.709Z",
+  "syncedAt": "2026-10-10T09:59:40.305Z",
   "prs": [
-    {"number":9923,"title":"fix(seal): bake a serve manifest free of seal stage paths","state":"open","draft":false,"url":"https://github.com/jaseci-labs/jac/pull/9923","createdAt":"2026-10-10T08:25:56Z","updatedAt":"2026-10-10T08:28:56Z","mergedAt":null,"closedAt":null,"headSha":"c899b81ea323c2fe886cca02c5699d4549b210aa","additions":35,"deletions":4,"changedFiles":4,"explained":null,"failures":0},
+    {"number":9923,"title":"fix(seal): bake a serve manifest free of seal stage paths","state":"open","draft":false,"url":"https://github.com/jaseci-labs/jac/pull/9923","createdAt":"2026-10-10T08:25:56Z","updatedAt":"2026-10-10T08:28:56Z","mergedAt":null,"closedAt":null,"headSha":"c899b81ea323c2fe886cca02c5699d4549b210aa","additions":35,"deletions":4,"changedFiles":4,"explained":{"sha":"c899b81ea323c2fe886cca02c5699d4549b210aa","at":"2026-10-10T09:59:52.980Z","model":"claude-sonnet-5-5"},"failures":0},
     {"number":9911,"title":"fix(scale): Redis never serves an anchor older than Mongo after a field update or a late refill (#9840)","state":"open","draft":false,"url":"https://github.com/jaseci-labs/jac/pull/9911","createdAt":"2026-10-09T11:40:39Z","updatedAt":"2026-10-09T12:28:03Z","mergedAt":null,"closedAt":null,"headSha":"bc9c6afb8de6ad476e9b39a54685b1da7a66c55e","additions":176,"deletions":15,"changedFiles":6,"explained":null,"failures":0},
     {"number":9836,"title":"fix(serve): pool and reuse keep-alive connections in the serving client (#7907)","state":"open","draft":false,"url":"https://github.com/jaseci-labs/jac/pull/9836","createdAt":"2026-10-07T04:08:35Z","updatedAt":"2026-10-10T08:52:58Z","mergedAt":null,"closedAt":null,"headSha":"074fa0dfcdd6f98c6b8e6a8f7fecd88703201db3","additions":387,"deletions":48,"changedFiles":5,"explained":null,"failures":0},
     {"number":9740,"title":"feat(scale): the admin Logs page reads pod logs when Loki is not deployed (#9673)","state":"open","draft":false,"url":"https://github.com/jaseci-labs/jac/pull/9740","createdAt":"2026-10-03T06:50:11Z","updatedAt":"2026-10-07T12:08:02Z","mergedAt":null,"closedAt":null,"headSha":"f2e75ec4ce881379f22de8208138a040a6e1718a","additions":292,"deletions":27,"changedFiles":4,"explained":null,"failures":0},

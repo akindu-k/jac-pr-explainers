@@ -6,70 +6,92 @@
 
 <p align="center">
   A plain-language explainer for every pull request I open in <a href="https://github.com/jaseci-labs/jac">jaseci-labs/jac</a>,<br>
-  written automatically and published as a small website.
-</p>
-
-<p align="center">
-  <a href="https://akindu-k.github.io/jac-pr-explainers/"><strong>Read the explainers →</strong></a>
+  written automatically and shown on a small private website.
 </p>
 
 ## What it does
 
-Every hour a GitHub Actions job:
+**Every hour**, a GitHub Actions job:
 
 1. Finds every PR by [@akindu-k](https://github.com/akindu-k) in `jaseci-labs/jac`.
-2. Writes an explainer for any PR that doesn't have one yet, or that has new commits since its explainer was written. It sends the PR's description, commits and diff to a language model and asks for these sections: *In short*, *Why it was needed*, *What changed*, *How it works*, *Tests* and *Worth knowing*.
+2. Writes an explainer for any PR that doesn't have one yet, or that has new commits since its explainer was written. It sends the PR's description, commits and diff to the model and asks for these sections: *In short*, *Why it was needed*, *What changed*, *How it works*, *Tests* and *Worth knowing*.
 3. Commits the result to [`site/explainers/`](site/explainers): one `<number>.md` per PR, plus `index.json` listing every PR.
-4. Publishes [`site/`](site) to GitHub Pages. The page lists the PRs (search, filter by open, merged or closed) and renders each `.md` file.
 
-The `.md` files are also readable on GitHub.
+**The website** (an Express server on Render) needs a username and password. It lists the PRs, with search and open/merged/closed filters, and renders each explainer. It reads the explainers from this repo when a page is requested, so new explainers appear without a redeploy.
+
+**Refresh** fetches your current PRs from GitHub straight away, so new PRs show up at once. It then starts the job, and the page follows the job and reloads when the new explainers are written.
 
 ## Setup
 
-The job works with any provider that has an OpenAI-compatible chat completions API. The default is Google's Gemini API, whose free tier needs no card:
+### 1. Let the job use your Claude subscription
 
-1. Create a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
-2. Add it to the repo as the secret **`LLM_API_KEY`** (Settings → Secrets and variables → Actions).
-3. Run **Explain PRs** from the Actions tab, or wait for the next hourly run.
+Explainers are written by Claude through the Claude Code CLI, signed in with your Pro or Max plan rather than a paid API key. Usage counts toward your plan's limits. By default the job writes at most 3 explainers an hour, which leaves room for your own use while it works through older PRs.
 
-Until the key is set, the job still updates the PR list and the site, and every PR shows as *Pending*.
+```sh
+claude setup-token        # sign in in the browser; prints a token valid for one year
+gh secret set CLAUDE_CODE_OAUTH_TOKEN -R akindu-k/jac-pr-explainers   # paste it
+```
 
-### Using another provider
+Until the secret is set, the job only updates the PR list, and every PR shows as *Pending*.
 
-Set these as repository **variables**, and put the provider's key in the `LLM_API_KEY` secret:
+### 2. Make a token for the website
 
-| Provider | `LLM_BASE_URL` | `LLM_MODEL` (example) | Notes |
-| --- | --- | --- | --- |
-| Google Gemini (default) | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.8-flash` | Free tier, large context |
-| Groq | `https://api.groq.com/openai/v1` | `openai/gpt-oss-120b` | Free tier; set `MAX_INPUT_CHARS` to about `20000` |
-| OpenRouter | `https://openrouter.ai/api/v1` | any model ending in `:free` | 50 free requests a day |
-| OpenAI | `https://api.openai.com/v1` | `gpt-5-mini` | Needs API billing; a ChatGPT plan doesn't include API use |
-| Ollama (local) | `http://localhost:11434/v1` | `qwen3` | For running `npm run explain` on your own machine |
+Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with these settings:
 
-Other variables: `SOURCE_REPO` and `PR_AUTHOR` (whose PRs, where), `MAX_PER_RUN` (default 10) and `MAX_INPUT_CHARS` (default 120000). If a request is too long for the model, the job retries it with less of the diff. If the provider returns a rate limit, the remaining PRs wait for the next run.
+- **Repository access:** only `akindu-k/jac-pr-explainers`
+- **Permissions:** Contents *Read-only*, Actions *Read and write*
 
-### Re-explaining a PR
+The site uses it to read explainers and to start the job from the Refresh button.
 
-Run **Explain PRs** manually and enter PR numbers in *prs* (for example `9923, 9911`).
+### 3. Deploy the website on Render
+
+**New → Blueprint** on Render, then pick this repo. [`render.yaml`](render.yaml) sets up a free web service. When asked, fill in:
+
+| Variable | Value |
+| --- | --- |
+| `AUTH_PASSWORD` | the password you'll sign in with (the username is `akindu-k`) |
+| `GITHUB_TOKEN` | the token from step 2 |
+
+The server refuses to start without a password, so the site is never public by accident. Sessions last 30 days.
+
+## Configuration
+
+**Job** (repository variables and secrets):
+
+| Name | Default | |
+| --- | --- | --- |
+| `CLAUDE_CODE_OAUTH_TOKEN` (secret) | | From `claude setup-token` |
+| `LLM_MODEL` | `sonnet` | Any model name Claude Code accepts, for example `opus` or `haiku` |
+| `MAX_PER_RUN` | `3` | Most explainers per hourly run |
+| `MAX_INPUT_CHARS` | `120000` | How much PR text to send; long diffs are trimmed, source files before tests |
+| `SOURCE_REPO`, `PR_AUTHOR` | `jaseci-labs/jac`, `akindu-k` | Whose PRs, and where |
+
+If you hit the plan's usage limit, the job stops and the rest wait for the next run. To explain specific PRs again, run **Explain PRs** from the Actions tab and enter their numbers in *prs*.
+
+The job can also use any OpenAI-compatible API instead. Set `LLM_PROVIDER=openai` with `LLM_BASE_URL`, `LLM_MODEL` and an `LLM_API_KEY` secret. For example, Gemini's free tier uses `https://generativelanguage.googleapis.com/v1beta/openai` with `gemini-3.8-flash`.
+
+**Website** (environment variables): `AUTH_USERNAME` (default `akindu-k`), `AUTH_PASSWORD`, `GITHUB_TOKEN`, and `CONTENT_REPO`, the repo to read explainers from. When `CONTENT_REPO` is unset, the site reads the local `site/explainers/`.
 
 ## Run locally
 
-Requires Node.js 22.13 or newer. There are no dependencies to install.
+Requires Node.js 22.13 or newer.
 
 ```sh
-cp .env.example .env              # fill in LLM_API_KEY
-GITHUB_TOKEN=$(gh auth token) npm run explain
-npm run preview                   # http://localhost:8080
+npm install
+cp .env.example .env                            # set AUTH_PASSWORD
+GITHUB_TOKEN=$(gh auth token) npm run explain   # uses your local Claude Code login
+npm start                                       # http://localhost:3000
 npm test
 ```
 
 ## Layout
 
 ```
-src/run.js        sync PRs, pick what needs explaining, write the files
-src/github.js     GitHub REST calls
-src/llm.js        OpenAI-compatible chat client
-src/prompt.js     prompt (fitted to a size budget) and the .md format
-src/store.js      index.json and the queue of PRs to explain
-site/             the website, published as-is to GitHub Pages
+src/run.js        the job: sync PRs, pick what needs explaining, write the files
+src/sync.js       bring the PR list up to date with GitHub
+src/llm.js        Claude Code CLI, or any OpenAI-compatible API
+src/prompt.js     the prompt (fitted to a size budget) and the .md format
+src/store.js      index.json, the queue, and merging a refresh into it
+server/           the website: sign-in, explainers from the repo, refresh
+site/             the pages the server serves
 ```

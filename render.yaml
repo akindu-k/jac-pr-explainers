@@ -1,0 +1,24 @@
+# Render Blueprint for the private website. Explainers are read from this
+# GitHub repo at request time, so the workflow's commits don't redeploy it.
+services:
+  - type: web
+    name: jac-pr-explainers
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    buildFilter:
+      ignoredPaths:
+        - site/explainers/**
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: CONTENT_REPO
+        value: akindu-k/jac-pr-explainers
+      - key: AUTH_USERNAME
+        value: akindu-k
+      - key: AUTH_PASSWORD
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false

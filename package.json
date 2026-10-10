@@ -1,16 +1,21 @@
 {
   "name": "jac-pr-explainers",
   "version": "0.1.0",
-  "description": "Plain-language explainers for my pull requests in jaseci-labs/jac, published as a small website.",
+  "description": "Plain-language explainers for my pull requests in jaseci-labs/jac, on a small private website.",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=22.13"
   },
   "scripts": {
+    "start": "node --env-file-if-exists=.env server/server.js",
+    "dev": "node --env-file-if-exists=.env --watch server/server.js",
     "explain": "node --env-file-if-exists=.env src/run.js",
-    "preview": "python3 -m http.server 8080 --directory site",
     "test": "node --test test/*.test.js"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "main": "server/server.js"
 }

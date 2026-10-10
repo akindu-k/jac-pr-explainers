@@ -1,8 +1,10 @@
 const API = 'https://api.github.com';
 
 export function createGitHub(token) {
-  async function request(path) {
+  async function request(path, { method = 'GET', body } = {}) {
     const res = await fetch(path.startsWith('http') ? path : API + path, {
+      method,
+      body: body && JSON.stringify(body),
       headers: {
         accept: 'application/vnd.github+json',
         'x-github-api-version': '2022-11-28',
@@ -14,7 +16,8 @@ export function createGitHub(token) {
     if (!res.ok) {
       throw new Error(`GitHub ${res.status} for ${path}: ${(await res.text()).slice(0, 200)}`);
     }
-    return { data: await res.json(), next: nextLink(res.headers.get('link')) };
+    const text = await res.text();
+    return { data: text ? JSON.parse(text) : null, next: nextLink(res.headers.get('link')) };
   }
 
   async function paginate(path, maxPages = 10) {
@@ -41,6 +44,13 @@ export function createGitHub(token) {
     },
     getPullCommits(repo, number) {
       return paginate(`/repos/${repo}/pulls/${number}/commits?per_page=100`, 1);
+    },
+    async dispatchWorkflow(repo, workflow, ref = 'main') {
+      await request(`/repos/${repo}/actions/workflows/${workflow}/dispatches`, { method: 'POST', body: { ref } });
+    },
+    async latestRun(repo, workflow, event) {
+      const { data } = await request(`/repos/${repo}/actions/workflows/${workflow}/runs?event=${event}&per_page=1`);
+      return data.workflow_runs[0] ?? null;
     },
   };
 }

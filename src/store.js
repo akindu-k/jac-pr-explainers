@@ -51,3 +51,16 @@ export function pickQueue(prs, { only = [], max }) {
     .sort((a, b) => b.number - a.number)
     .slice(0, max);
 }
+
+// The saved list with fresher PR details layered on top (from the site's
+// refresh button). Explainer state always comes from the saved list, since
+// only the workflow writes explainers.
+export function mergeLive(saved, live) {
+  const byNumber = new Map(saved.map((pr) => [pr.number, pr]));
+  for (const pr of live) {
+    const current = byNumber.get(pr.number);
+    if (current && current.updatedAt >= pr.updatedAt) continue;
+    byNumber.set(pr.number, { ...pr, explained: current?.explained ?? null, failures: current?.failures ?? 0 });
+  }
+  return [...byNumber.values()].sort((a, b) => b.number - a.number);
+}

@@ -180,16 +180,77 @@ document.getElementById('theme').addEventListener('click', () => {
 
 window.addEventListener('hashchange', route);
 
-try {
-  const res = await fetch('explainers/index.json', { cache: 'no-cache' });
+async function load() {
+  const res = await fetch('explainers/index.json', { cache: 'no-store' });
+  if (res.status === 401) return location.assign('/login');
+  if (!res.ok) throw new Error(res.status);
   index = await res.json();
   foot.replaceChildren(
     `Updated ${new Date(index.syncedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })} · `,
     el('a', { href: 'https://github.com/akindu-k/jac-pr-explainers' }, 'Source'),
-    ' · ',
-    el('a', { href: 'https://akindukalhan.is-a.dev' }, 'Akindu Kalhan'),
   );
   route();
+}
+
+// Refresh: the server fetches the current PRs at once, then starts the job
+// that writes explainers; poll that job and reload when it finishes.
+
+const refreshButton = document.getElementById('refresh');
+const statusLine = document.getElementById('status');
+
+function say(text, url) {
+  statusLine.hidden = !text;
+  statusLine.replaceChildren(text ?? '', url ? ' ' : '', url ? el('a', { href: url }, 'View the job ↗') : '');
+}
+
+function busy(on) {
+  refreshButton.disabled = on;
+  refreshButton.classList.toggle('spinning', on);
+}
+
+async function poll() {
+  let state;
+  let url;
+  try {
+    ({ state, url } = await (await fetch('/api/refresh', { cache: 'no-store' })).json());
+  } catch {
+    state = 'unknown';
+  }
+  if (state === 'idle') return busy(false);
+  if (state === 'done') {
+    await load();
+    say('Explainers are up to date.');
+    return busy(false);
+  }
+  if (state === 'failed' || state === 'unknown') {
+    say('The explainer job did not finish.', url);
+    return busy(false);
+  }
+  busy(true);
+  say(state === 'in_progress' ? 'PR list updated. Writing explainers for anything new…' : 'PR list updated. Waiting for the explainer job to start…', url);
+  setTimeout(poll, 5000);
+}
+
+refreshButton.addEventListener('click', async () => {
+  busy(true);
+  say('Checking GitHub for your latest PRs…');
+  try {
+    const res = await fetch('/api/refresh', { method: 'POST' });
+    if (res.status === 401) return location.assign('/login');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    await load();
+    if (data.dispatched) return poll();
+    say('PR list updated. New explainers are written on the next hourly run.');
+  } catch (err) {
+    say(`Refresh failed: ${err.message}`);
+  }
+  busy(false);
+});
+
+try {
+  await load();
+  poll();
 } catch {
   app.replaceChildren(el('p', { class: 'muted' }, 'The list of pull requests could not be loaded.'));
 }

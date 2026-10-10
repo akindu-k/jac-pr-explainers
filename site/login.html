@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Jac PRs Explained</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body>
+  <main class="login">
+    <div class="login-card">
+      <img src="favicon.svg" width="52" height="52" alt="">
+      <h1>Jac PRs, explained</h1>
+      <p class="muted">Sign in to continue.</p>
+
+      <form class="login-form" method="post" action="/login">
+        <input type="hidden" name="next" id="next">
+        <label class="field">
+          <span>Username</span>
+          <input name="username" type="text" required autofocus autocomplete="username" autocapitalize="none" spellcheck="false">
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input id="password" name="password" type="password" required autocomplete="current-password" aria-describedby="login-error">
+        </label>
+        <p class="login-error" id="login-error" role="alert" hidden>That username or password isn't right. Try again.</p>
+        <button class="btn btn-primary" type="submit" id="submit">Sign in</button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    document.getElementById('next').value = params.get('next') ?? '/';
+    if (params.has('error')) {
+      document.getElementById('login-error').hidden = false;
+      document.getElementById('password').setAttribute('aria-invalid', 'true');
+    }
+    document.querySelector('.login-form').addEventListener('submit', () => {
+      const submit = document.getElementById('submit');
+      submit.disabled = true;
+      submit.textContent = 'Signing in…';
+    });
+  </script>
+</body>
+</html>

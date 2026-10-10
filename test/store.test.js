@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { loadIndex, pickQueue, saveIndex } from '../src/store.js';
+import { loadIndex, mergeLive, pickQueue, saveIndex } from '../src/store.js';
 
 const entry = (number, headSha, explainedSha, failures = 0) => ({
   number,
@@ -31,4 +31,20 @@ test('the index round-trips with one PR per line', async () => {
   const text = await readFile(new URL('index.json', dir), 'utf8');
   assert.equal(text.split('\n').filter((l) => l.includes('"number"')).length, 2);
   assert.deepEqual(await loadIndex(dir), index);
+});
+
+test('a refresh updates PR details but keeps saved explainer state', () => {
+  const saved = [
+    { number: 1, title: 'a', updatedAt: '2026-10-01', explained: { sha: 'x' }, failures: 0 },
+    { number: 2, title: 'b', updatedAt: '2026-10-05', explained: null, failures: 1 },
+  ];
+  const live = [
+    { number: 3, title: 'new', updatedAt: '2026-10-06', explained: null },
+    { number: 1, title: 'a2', updatedAt: '2026-10-02', explained: null },
+    { number: 2, title: 'stale', updatedAt: '2026-10-04', explained: null },
+  ];
+  assert.deepEqual(
+    mergeLive(saved, live).map((p) => [p.number, p.title, p.explained]),
+    [[3, 'new', null], [2, 'b', null], [1, 'a2', { sha: 'x' }]],
+  );
 });
