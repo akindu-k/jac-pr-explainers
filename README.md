@@ -59,7 +59,7 @@ Explainers only state what the PR's description, commits and diff support. When 
 | **Prompt versioning** | Each explainer records the prompt version it was written with. When the prompt changes, older explainers are rewritten. |
 | **Newest first** | New PRs are explained before older ones, so a backfill never delays a PR you just opened. |
 | **Fits the diff to the model** | Lockfiles and generated files are left out, source files come before tests, and long diffs are trimmed to a size budget. A request that is still too long is retried with half the diff. |
-| **Polite to usage limits** | At most 3 explainers per run (configurable), with a pause between requests. On a usage limit the run stops and the next one carries on. A PR that fails 3 times is skipped until it changes. |
+| **Polite to usage limits** | At most 10 explainers per run (configurable), with a pause between requests. On a usage limit the run stops and the next one carries on. A PR that fails 3 times is skipped until it changes. |
 | **Re-explain on demand** | Run the workflow manually with PR numbers to write their explainers again. |
 | **Quiet history** | Runs that change nothing don't commit. Commits name the PRs they explain, e.g. `Explain #9911, #9836, #9740`. |
 | **Readable on GitHub** | Explainers are plain Markdown files in [`site/explainers/`](site/explainers), one per PR. |
@@ -162,8 +162,9 @@ The Blueprint ignores commits that only touch `site/explainers/`, so the job's c
 | Name | Default | |
 | --- | --- | --- |
 | `CLAUDE_CODE_OAUTH_TOKEN` (secret) | | From `claude setup-token` |
-| `LLM_MODEL` | `sonnet` | Any model Claude Code accepts, e.g. `opus` or `haiku` |
-| `MAX_PER_RUN` | `3` | Most explainers per run |
+| `LLM_MODEL` | `claude-opus-5-5` | Any model Claude Code accepts, e.g. `claude-sonnet-5-5` to use less of your plan |
+| `LLM_EFFORT` | `medium` | How hard the model thinks: `low`, `medium`, `high`, `xhigh` or `max` |
+| `MAX_PER_RUN` | `10` | Most explainers per run |
 | `MAX_INPUT_CHARS` | `120000` | How much PR text to send per request |
 | `SOURCE_REPO` | `jaseci-labs/jac` | Where to look for PRs |
 | `PR_AUTHOR` | `akindu-k` | Whose PRs to explain |

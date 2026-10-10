@@ -3,8 +3,9 @@
 
 export const MARKER = '<!-- explainer -->';
 
-// Bump when the prompt changes, so existing explainers are written again.
-export const PROMPT_VERSION = 2;
+// Bump when the prompt or the default model changes, so existing explainers
+// are written again.
+export const PROMPT_VERSION = 3;
 
 const SYSTEM = `You explain a pull request to the person who wrote it. They are new to this codebase and need to explain the PR to a senior engineer, so they must understand every change and the reason for it.
 

@@ -27,11 +27,12 @@ export function complete(llm, messages) {
   return llm.provider === 'claude-code' ? claudeCode(llm, messages) : openai(llm, messages);
 }
 
-async function claudeCode({ model }, messages) {
+async function claudeCode({ model, effort }, messages) {
   const [system, user] = messages;
   const args = [
     '-p',
     '--model', model,
+    '--effort', effort,
     '--system-prompt', system.content,
     // A single answer: no tools, no settings or memory from the machine.
     '--tools', '',
