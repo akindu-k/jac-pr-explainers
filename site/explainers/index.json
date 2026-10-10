@@ -1,7 +1,7 @@
 {
   "repo": "jaseci-labs/jac",
   "author": "akindu-k",
-  "syncedAt": "2026-10-10T09:49:48.846Z",
+  "syncedAt": "2026-10-10T09:50:44.709Z",
   "prs": [
     {"number":9923,"title":"fix(seal): bake a serve manifest free of seal stage paths","state":"open","draft":false,"url":"https://github.com/jaseci-labs/jac/pull/9923","createdAt":"2026-10-10T08:25:56Z","updatedAt":"2026-10-10T08:28:56Z","mergedAt":null,"closedAt":null,"headSha":"c899b81ea323c2fe886cca02c5699d4549b210aa","additions":35,"deletions":4,"changedFiles":4,"explained":null,"failures":0},
     {"number":9911,"title":"fix(scale): Redis never serves an anchor older than Mongo after a field update or a late refill (#9840)","state":"open","draft":false,"url":"https://github.com/jaseci-labs/jac/pull/9911","createdAt":"2026-10-09T11:40:39Z","updatedAt":"2026-10-09T12:28:03Z","mergedAt":null,"closedAt":null,"headSha":"bc9c6afb8de6ad476e9b39a54685b1da7a66c55e","additions":176,"deletions":15,"changedFiles":6,"explained":null,"failures":0},
