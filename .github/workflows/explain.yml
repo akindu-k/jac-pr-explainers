@@ -59,6 +59,8 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           explained='${{ steps.run.outputs.explained }}'
-          git commit -m "${explained:+Explain $explained}${explained:-Update the PR list}"
+          message='Update the PR list'
+          [ -n "$explained" ] && message="Explain $explained"
+          git commit -m "$message"
           git pull --rebase
           git push
