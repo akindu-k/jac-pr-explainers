@@ -99,7 +99,7 @@ To write it, the model gets the PR's description, linked issues, commits, review
 
 | An explainer | On a phone |
 | --- | --- |
-| ![The explainer for #9740, opening with In short and Words to know](docs/screenshots/explainer-dark.webp) | <img src="docs/screenshots/mobile.webp" width="300" alt="The open PR list on a phone"> |
+| ![Section 5 of the #9551 explainer: a coloured diff of each change, followed by What, Why and Things to notice](docs/screenshots/explainer.webp) | <img src="docs/screenshots/mobile.webp" width="300" alt="The open PR list on a phone"> |
 
 ## How it works
 
