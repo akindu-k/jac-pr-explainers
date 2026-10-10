@@ -59,7 +59,7 @@ async function claudeCode({ model, effort }, messages) {
 
 function run(command, args, input) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: tmpdir(), stdio: ['pipe', 'pipe', 'pipe'], timeout: 600_000 });
+    const child = spawn(command, args, { cwd: tmpdir(), stdio: ['pipe', 'pipe', 'pipe'], timeout: 1_200_000 });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (chunk) => (stdout += chunk));

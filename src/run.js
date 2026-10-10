@@ -3,7 +3,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { config } from './config.js';
 import { createGitHub } from './github.js';
 import { complete } from './llm.js';
-import { buildMessages, cleanAnswer, PROMPT_VERSION, renderExplainer, summaryOf } from './prompt.js';
+import { buildMessages, cleanAnswer, linkedIssues, PROMPT_VERSION, renderExplainer, summaryOf } from './prompt.js';
 import { loadIndex, pickQueue, saveIndex, toEntry } from './store.js';
 import { syncPrs } from './sync.js';
 
@@ -18,11 +18,11 @@ index.repo = repo;
 index.author = author;
 index.syncedAt = new Date().toISOString();
 index.prs = prs;
-// Explainers written before summaries were stored.
+// Summaries are read from the saved explainers, so they follow summaryOf's current rules.
 for (const entry of index.prs) {
-  if (!entry.explained || entry.summary) continue;
-  const markdown = await readFile(new URL(`${entry.number}.md`, outDir), 'utf8').catch(() => '');
-  entry.summary = summaryOf(markdown);
+  if (!entry.explained) continue;
+  const markdown = await readFile(new URL(`${entry.number}.md`, outDir), 'utf8').catch(() => null);
+  if (markdown != null) entry.summary = summaryOf(markdown);
 }
 console.log(`${found} PRs by @${author} in ${repo}, ${pulls.size} new or updated.`);
 
@@ -37,13 +37,21 @@ for (const [i, entry] of queue.entries()) {
   const n = entry.number;
   try {
     const pr = pulls.get(n) ?? (await github.getPull(repo, n));
-    const [files, commits] = await Promise.all([github.getPullFiles(repo, n), github.getPullCommits(repo, n)]);
+    const [files, commits, discussion, checks, issues] = await Promise.all([
+      github.getPullFiles(repo, n),
+      github.getPullCommits(repo, n),
+      github.getDiscussion(repo, n),
+      github.getCheckRuns(repo, pr.head.sha).catch(() => []),
+      // Only real issues: a #number can also point at another PR.
+      Promise.all(linkedIssues(pr).map((i) => github.getIssue(repo, i).catch(() => null)))
+        .then((found) => found.filter((i) => i && !i.pull_request)),
+    ]);
 
     let answer;
     let model;
     for (let maxChars = config.maxInputChars; ; maxChars = Math.floor(maxChars / 2)) {
       try {
-        const messages = buildMessages({ repo, pr, files, commits, maxChars });
+        const messages = buildMessages({ repo, pr, files, commits, issues, discussion, checks, maxChars });
         ({ text: answer, model } = await complete(config.llm, messages));
         break;
       } catch (err) {
@@ -53,7 +61,7 @@ for (const [i, entry] of queue.entries()) {
     }
 
     const body = cleanAnswer(answer);
-    const markdown = renderExplainer({ repo, pr, body, model });
+    const markdown = renderExplainer({ repo, pr, body, model, issues, files });
     await writeFile(new URL(`${n}.md`, outDir), markdown);
     Object.assign(entry, toEntry(pr, entry), {
       explained: { sha: pr.head.sha, prompt: PROMPT_VERSION, at: new Date().toISOString(), model },

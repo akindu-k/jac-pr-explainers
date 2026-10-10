@@ -36,19 +36,23 @@ A PR's diff shows *what* changed, but not the background you need to talk about 
 
 ### Explainers
 
-Each explainer is written to the PR's author, as someone new to the codebase, and has the same sections:
+Each explainer is a review-style document written for the PR's author, as someone new to that part of the codebase who has to present the PR to a senior. It starts with the facts: PR and linked issue, author, state, the commit it describes, and lines changed in production code, tests and release notes. Then it has 11 numbered sections:
 
 | Section | What it covers |
 | --- | --- |
-| **In short** | The problem and the fix in two or three sentences. |
-| **Words to know** | A simple explanation of every term the PR needs: project parts, tools and programming ideas. |
-| **The problem** | What happened before the PR, step by step, and why it was wrong. |
-| **The changes, one by one** | Each file or group of files: what the code does now, why it changed, and diff excerpts explained line by line. |
-| **How it runs now** | A numbered walk-through of the execution flow after the PR, with changed and new steps marked. |
-| **Tests** | What each added or changed test sets up, checks and proves. |
-| **Explaining it in one minute** | A short paragraph to say out loud to a senior. |
+| **1. The short version** | The problem and the fix, with the key sentences in bold, and where the PR stands now. |
+| **2. Words you need to know** | A table of every term the PR needs, in simple words, ordered so each builds on the last. It marks where the bug lives. |
+| **3. The problem, step by step** | The setup, a numbered timeline of what went wrong (with values as they change), and why it mattered. |
+| **4. The idea of the fix** | The fix in one sentence, and why it's the right idea. |
+| **5. Every code change, explained** | Each file's diff hunks, coloured, with **What**, **Why** and **Things to notice**. |
+| **6. How execution flows after the PR** | Call trees from trigger to result, with new and changed steps marked, plus a before/after table of scenarios. |
+| **7. Test changes, explained** | Test counts before and after, and what each test (or table row) sets up and proves. |
+| **8. CI and checks** | The results of the CI runs on the commit it describes. |
+| **9. Review comments and their status** | Each reviewer's comments, marked Fixed (with the commit), Answered or Open. |
+| **10. Is it ready to merge?** | A verdict, the reasons, and what to do before merging, including where the PR description has fallen behind the code. |
+| **11. Questions your senior might ask** | Likely questions, with short answers. |
 
-Explainers only state what the PR's description, commits and diff support. When the model is unsure, or part of the diff had to be left out, the explainer says so instead of guessing.
+To write it, the model gets the PR's description, linked issues, commits, reviews and comments, CI results and diff. It only states what those show. When something can't be told from them, or part of the diff had to be left out, it says so instead of guessing.
 
 ### Automation
 
@@ -79,9 +83,9 @@ Explainers only state what the PR's description, commits and diff support. When 
 | **Secure sessions** | Signed, HttpOnly, SameSite cookies that last 30 days. Failed sign-ins are slowed down. Changing the password signs every session out. |
 | **Open PRs first** | The list opens on your open PRs, the ones still in review. Open / Merged / Closed / All filters show how many PRs each holds. Search works by title or number. |
 | **Colour-coded states** | Green for open, purple for merged, grey for closed, with a coloured edge and label on every row. Drafts get an outlined *Draft* label. The counts at the top use the same colours. |
-| **Summaries in the list** | Each row shows the explainer's *In short* text under the title, so you can tell what a PR does without opening it. |
+| **Summaries in the list** | Each row shows the explainer's bug and fix lines under the title, so you can tell what a PR does without opening it. |
 | **Status notes** | *Explainer not written yet* for PRs still waiting. *New commits since the explainer* when the PR changed after its explainer was written. |
-| **Explainer page** | Shows the PR's state, dates, size and GitHub link above the rendered explainer. The Markdown is sanitized before display. |
+| **Explainer page** | Shows the PR's state, dates, size and GitHub link above the rendered explainer. Diff lines are coloured green and red, and the Markdown is sanitized before display. |
 | **Refresh button** | Fetches your current PRs from GitHub straight away, so new ones appear at once. It then starts the job and shows its progress, and reloads when the new explainers are in. |
 | **Always current** | The site reads explainers from this repo on request, cached briefly and revalidated with ETags. New explainers appear without a redeploy. |
 | **Light and dark** | Follows the system theme, with a toggle that's remembered. |

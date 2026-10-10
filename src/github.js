@@ -45,6 +45,26 @@ export function createGitHub(token) {
     getPullCommits(repo, number) {
       return paginate(`/repos/${repo}/pulls/${number}/commits?per_page=100`, 1);
     },
+    async getIssue(repo, number) {
+      return (await request(`/repos/${repo}/issues/${number}`)).data;
+    },
+    // Review verdicts, inline review comments and conversation comments, oldest first.
+    async getDiscussion(repo, number) {
+      const [reviews, inline, conversation] = await Promise.all([
+        paginate(`/repos/${repo}/pulls/${number}/reviews?per_page=100`, 2),
+        paginate(`/repos/${repo}/pulls/${number}/comments?per_page=100`, 3),
+        paginate(`/repos/${repo}/issues/${number}/comments?per_page=100`, 2),
+      ]);
+      return [
+        ...reviews.filter((r) => r.body?.trim() || r.state !== 'COMMENTED').map((r) => ({ kind: 'review', ...r, created_at: r.submitted_at })),
+        ...inline.map((c) => ({ kind: 'inline', ...c })),
+        ...conversation.map((c) => ({ kind: 'comment', ...c })),
+      ].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+    },
+    async getCheckRuns(repo, sha) {
+      const { data } = await request(`/repos/${repo}/commits/${sha}/check-runs?per_page=100`);
+      return data.check_runs;
+    },
     async dispatchWorkflow(repo, workflow, ref = 'main') {
       await request(`/repos/${repo}/actions/workflows/${workflow}/dispatches`, { method: 'POST', body: { ref } });
     },

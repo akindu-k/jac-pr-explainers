@@ -172,6 +172,11 @@ async function renderDetail(number) {
     const text = await res.text();
     const body = text.includes(MARKER) ? text.slice(text.indexOf(MARKER) + MARKER.length) : text;
     article.innerHTML = DOMPurify.sanitize(marked.parse(body));
+    // Colour added and removed lines in diff blocks.
+    for (const code of article.querySelectorAll('code.language-diff')) {
+      code.replaceChildren(...code.textContent.replace(/\n$/, '').split('\n').map((line) =>
+        el('span', { class: line.startsWith('+') ? 'add' : line.startsWith('-') ? 'del' : 'line' }, line || ' ')));
+    }
     for (const a of article.querySelectorAll('a[href^="http"]')) a.rel = 'noopener';
   } catch {
     article.replaceChildren(el('p', { class: 'muted' }, 'The explainer could not be loaded.'));
